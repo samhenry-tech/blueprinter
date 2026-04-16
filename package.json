@@ -1,0 +1,29 @@
+{
+  "name": "blueprinter",
+  "version": "1.0.0",
+  "description": "Interactive CLI that scaffolds small project blueprints",
+  "bin": {
+    "blueprinter": "dist/blueprinter.js"
+  },
+  "main": "dist/blueprinter.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/blueprinter.ts",
+    "start": "node dist/blueprinter.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "commander": "^14.0.3",
+    "inquirer": "^13.4.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}
