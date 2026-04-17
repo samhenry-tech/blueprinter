@@ -8,7 +8,8 @@ export const blueprintConfigItemSchema = z.object({
 export type BlueprintConfigItem = z.infer<typeof blueprintConfigItemSchema>;
 
 export const blueprintConfigSchema = z.object({
-  items: z.array(blueprintConfigItemSchema),
+  delimiter: z.string().min(1),
+  variables: z.array(blueprintConfigItemSchema),
 });
 
 export type BlueprintConfig = z.infer<typeof blueprintConfigSchema>;

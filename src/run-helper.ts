@@ -1,5 +1,5 @@
 import path from "path";
-import { BlueprintSource } from "./models/BlueprintSource";
+import type { BlueprintSource } from "./models/BlueprintSource";
 import { existsSync, statSync } from "fs";
 
 

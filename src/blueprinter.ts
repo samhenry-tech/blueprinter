@@ -4,7 +4,7 @@ import inquirer from "inquirer";
 import { access, chmod, mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
-import { commandRun } from "./blueprinter-run";
+import { commandRun } from "./blueprinter-run/blueprinter-run";
 
 type Template = "node-cli" | "readme";
 type PackageManager = "npm" | "pnpm" | "yarn";

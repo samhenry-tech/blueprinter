@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx src/blueprinter.ts",
-    "start": "node dist/blueprinter.js",
+    "start": "mkdir -p local && rm -rf local/* local/.[!.]* local/..?* && (cd local && tsx ../src/blueprinter.ts run)",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
