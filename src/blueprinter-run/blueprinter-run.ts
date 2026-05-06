@@ -6,7 +6,8 @@ import { BlueprintConfig, blueprintConfigSchema } from "../models/BlueprintConfi
 import { parseSupportedSource } from "../run-helper";
 import { resolveBlueprintRoot } from "../resolveBlueprintRoot";
 import { copyBlueprintFolderToCwd, applyReplacementsToCopiedTree } from "../applyBlueprintToCwd";
-import { checkGithubFolderExists, fetchGithubFile, parseGitHubRepoRef as parseGitHubRepoReference } from "./githubUtils";
+import { checkGithubFolderExists, parseGitHubRepoReference } from "./githubUtils";
+import { getGithubFile } from "./githubApi";
 import { downloadFile } from "./runUtils";
 
 const previousSourcesFileLocation = path.join(process.cwd(), ".blueprinter-sources.json");
@@ -115,7 +116,7 @@ const readAndValidateBlueprintSource = async (source: BlueprintSource): Promise<
     }
 
     const getAndParseConfigPromise = async () => {
-      const githubFile = await fetchGithubFile(repoReference, blueprintConfigFilename);
+      const githubFile = await getGithubFile(repoReference, blueprintConfigFilename);
       if (!githubFile.download_url) {
         throw new Error(`Download URL not found for GitHub file: ${githubFile.path}`);
       }

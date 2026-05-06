@@ -1,7 +1,8 @@
 import { githubFileSchema, githubFilesSchema } from "../models/GithubFile";
 import { GithubRepoReference } from "../models/GithubRepoReference";
+import { getGithubFolder } from "./githubApi";
 
-export const parseGitHubRepoRef = (input: string): GithubRepoReference | null => {
+export const parseGitHubRepoReference = (input: string): GithubRepoReference | null => {
   const raw = input.trim();
   if (!raw) return null;
 
@@ -59,52 +60,18 @@ export const parseGitHubRepoRef = (input: string): GithubRepoReference | null =>
 
 const githubApiBase = "https://api.github.com";
 
-export const fetchGithubFile = async (repo: GithubRepoReference, path: string) => {
-  const url = buildContentsUrl(repo, path);
-  return await getGithubFile(url);
-};
 
 export const checkGithubFolderExists = async (repo: GithubRepoReference, path: string): Promise<boolean> => {
   const { remainingPath, folderName } = getFolderAndPath(path);
   if (!folderName) throw new Error(`Folder name not found in path: ${path}`);
 
-  const url = buildContentsUrl(repo, remainingPath);
-  const files = await getGithubFolder(url);
+  const files = await getGithubFolder(repo, remainingPath);
   return files.some((file) => file.name === folderName && file.type === "dir");
 };
 
-const getGithubFile = async (url: string) => {
-  const json = await githubFetchJson(url)
-  return githubFileSchema.parse(json);
-}
 
-const getGithubFolder = async (url: string) => {
-  const json = await githubFetchJson(url)
-  return githubFilesSchema.parse(json);
-}
 
-const githubFetchJson = async (url: string) => {
-  const res = await fetch(url, {
-    headers: {
-      "Accept": "application/vnd.github+json",
-      "User-Agent": "blueprinter",
-    },
-  });
-
-  if (res.status === 404) {
-    throw new Error(`Not found on GitHub: ${url}`);
-  }
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`GitHub request failed (${res.status} ${res.statusText}). ${body}`.trim());
-  }
-
-  const json = await res.json();
-  return json;
-};
-
-const buildContentsUrl = (repoReference: GithubRepoReference, path: string): string => {
+export const buildContentsUrl = (repoReference: GithubRepoReference, path: string): string => {
   const { owner, repo, ref } = repoReference;
   const encodedPath = path
     .split("/")
@@ -113,8 +80,7 @@ const buildContentsUrl = (repoReference: GithubRepoReference, path: string): str
     .join("/");
 
   const base = `${githubApiBase}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${encodedPath}`;
-  if (!ref) return base;
-  return `${base}?ref=${encodeURIComponent(ref)}`;
+  return !ref ? base : `${base}?ref=${encodeURIComponent(ref)}`;
 };
 
 const getFolderAndPath = (path: string): { remainingPath: string; folderName: string } => {
@@ -125,3 +91,10 @@ const getFolderAndPath = (path: string): { remainingPath: string; folderName: st
     folderName: match?.[2] ?? "",
   };
 };
+
+export const buildGithubTarballUrl = (repoReference: GithubRepoReference): string => {
+  const { owner, repo, ref } = repoReference;
+  const base = `${githubApiBase}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/tarball`;
+  return !ref ? base : `${base}/${encodeURIComponent(ref)}`;
+};
+
