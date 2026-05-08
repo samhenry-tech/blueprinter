@@ -1,0 +1,1 @@
+export type ReplacementValue = { variableRegex: RegExp; value: string };

@@ -10,6 +10,9 @@ import { downloadFile } from "./api";
 import { BLUEPRINT_CONFIG_FILENAME, BLUEPRINT_FOLDER_NAME } from "./constants";
 import { copyToLocation } from "./copyToLocation";
 import { writeFile } from "node:fs/promises";
+import { displayMessage, displayNewLines, waitWithMessage } from "../messaging-helpers";
+import { applyReplacementsToProject } from "./applyReplacementsToProject";
+import { VariableValue } from "../models/VariableValue";
 
 export const getBlueprinterPreviousSourcesFileLocation = (): string => {
   const dir = getUserDataPath("blueprinter");
@@ -21,7 +24,8 @@ const previousSourcesFileLocation = getBlueprinterPreviousSourcesFileLocation();
 
 export const commandRun = async () => {
   // Step 1: Print the run intro
-  printRunIntro();
+  await printRunIntro();
+  displayNewLines(2);
 
   // Step 2: Read the previous sources
   const previousSources = readPreviousSources();
@@ -30,34 +34,39 @@ export const commandRun = async () => {
   const choice = await pickBlueprintSource(previousSources);
   const source: BlueprintSource = choice === "new" ? await promptNewSource() : choice;
 
-  await saveSource(source);
-
   // Step 4: Read and validate the blueprint source
-  console.log("Reading blueprint source...");
-  const blueprintConfig = await readAndValidateBlueprintSource(source);
-  console.log("Blueprint source is validated and ready to use.");
+  const blueprintConfig = await waitWithMessage(readAndValidateBlueprintSource(source), "Reading blueprint source...");
+  await saveSource(source);
+  await displayMessage("Blueprint source is validated and ready to use.");
+  displayNewLines(2);
 
   // Step 5: Ask all the questions
   const answers = await askQuestions(blueprintConfig);
-  console.log("Blueprint config:", blueprintConfig);
+  displayNewLines(2);
 
   // Step 6: Copy the project to the current directory
-  await copyToLocation(source, blueprintConfig);
+  await displayMessage("Now lets copy the project to the current directory.");
+  await waitWithMessage(copyToLocation(source), "Copying project to current directory");
+  displayNewLines(2);
 
   // Step 7: Apply the replacements to the project
+  await displayMessage("Now lets apply the replacements to the project.");
+  await waitWithMessage(applyReplacementsToProject(blueprintConfig, answers), "Applying replacements to project");
+  displayNewLines(2);
 
   // Step 8: Print the completion message
+  await displayMessage("Your project is ready!");
+  await displayMessage("You can now start working on your project.");
+  await displayMessage("--------------------------------", 0);
+  await displayMessage("Thank you for using Blueprinter!");
 };
 
-const printRunIntro = () => {
-  console.log("Welcome to Blueprinter!");
-  console.log("This is a tool that helps you create a project from a blueprint source.");
-  console.log("It asks a few questions, then generates the project based on your answers.");
-  console.log("");
-  console.log("--------------------------------");
-  console.log("");
-  console.log("Let's get started!");
-  console.log("");
+const printRunIntro = async () => {
+  await displayMessage("Welcome to Blueprinter!");
+  await displayMessage("This is a tool that helps you create a project from a blueprint source.");
+  await displayMessage("It asks a few questions, then generates the project based on your answers.");
+  await displayMessage("--------------------------------", 0);
+  await displayMessage("Let's get started!");
 };
 
 const readPreviousSources = (): BlueprintSource[] => {
@@ -82,23 +91,19 @@ type SourceChoice = BlueprintSource | "new";
 const pickBlueprintSource = async (
   previousSources: BlueprintSource[]
 ): Promise<SourceChoice> => {
-  console.log("TESTING: previousSources", previousSources);
   const choices = [
     ...previousSources.map((ps) => ({
       name: `${ps.source} (${ps.type === "github" ? "GitHub" : "Folder"})`,
       value: ps,
     })),
-    ...(previousSources.length > 0 ? [new inquirer.Separator()] : []),
     { name: "Enter a new source…", value: "new" as const },
   ];
 
-  console.log("TESTING: choices", choices);
-
   const { selection } = await inquirer.prompt<{ selection: SourceChoice }>([
     {
-      type: "list",
+      type: "select",
       name: "selection",
-      message: "Blueprint source:",
+      message: "What is your blueprint source?",
       choices,
     },
   ]);
@@ -154,9 +159,11 @@ const readAndValidateBlueprintSource = async (source: BlueprintSource): Promise<
   throw new Error(`Unsupported blueprint source type: ${source.type}`);
 };
 
-type VariableAnswer = { variableName: string; value: string };
 
-const askQuestions = async (blueprintConfig: BlueprintConfig): Promise<VariableAnswer[]> => {
+
+const askQuestions = async (blueprintConfig: BlueprintConfig): Promise<VariableValue[]> => {
+  await displayMessage("Now lets ask you a few questions to customize your project.");
+
   const answers = await inquirer.prompt<Record<string, string>>([
     ...blueprintConfig.variables.map((variable) => ({
       type: "input",

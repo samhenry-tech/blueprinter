@@ -1,6 +1,5 @@
 import path from "path";
 import os from "node:os";
-import { mkdirSync } from "node:fs";
 import type { BlueprintSource } from "./models/BlueprintSource";
 import { existsSync, statSync } from "fs";
 
@@ -77,3 +76,5 @@ export const getUserDataPath = (appName: string): string => {
   const xdgDataHome = process.env.XDG_DATA_HOME || path.join(home, ".local", "share");
   return path.join(xdgDataHome, appName);
 };
+
+

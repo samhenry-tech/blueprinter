@@ -60,13 +60,11 @@ export const parseGitHubRepoReference = (input: string): GithubRepoReference | n
 
 const githubApiBase = "https://api.github.com";
 
-
 export const checkGithubFolderExists = async (repo: GithubRepoReference, path: string): Promise<boolean> => {
   const { remainingPath, folderName } = getFolderAndPath(path);
   if (!folderName) throw new Error(`Folder name not found in path: ${path}`);
 
   const files = await getGithubFolder(repo, remainingPath);
-  console.log("TESTING: files", files, folderName);
   return files.some((file) => file.name === folderName && file.type === "dir");
 };
 

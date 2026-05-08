@@ -1,0 +1,1 @@
+export type VariableValue = { variableName: string; value: string };
