@@ -1,13 +1,13 @@
 import path from "node:path";
 import os from "node:os";
-import { mkdir, writeFile, mkdtemp, readdir, stat, copyFile, rm } from "node:fs/promises";
+import { mkdir, writeFile, mkdtemp, readdir, stat, rm, cp } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { BlueprintSource } from "../models/BlueprintSource";
 import { BlueprintConfig } from "../models/BlueprintConfig";
 import { buildGithubTarballUrl, parseGitHubRepoReference } from "./githubUtils";
-import { downloadBytes } from "./runUtils";
+import { downloadBytes } from "./api";
+import { BLUEPRINT_FOLDER_NAME } from "./constants";
 
-const blueprintFolderName = "blueprint";
 
 export const copyToLocation = async (source: BlueprintSource, blueprintConfig: BlueprintConfig) => {
   if (source.type !== "github") {
@@ -20,8 +20,8 @@ export const copyToLocation = async (source: BlueprintSource, blueprintConfig: B
   }
 
   const cwd = process.cwd();
-
   const tmpRoot = await mkdtemp(path.join(os.tmpdir(), "blueprinter-"));
+
   try {
     const githubTarballUrl = buildGithubTarballUrl(repoReference);
     const tarballBytes = await downloadBytes(githubTarballUrl);
@@ -33,17 +33,14 @@ export const copyToLocation = async (source: BlueprintSource, blueprintConfig: B
     await mkdir(extractedDir, { recursive: true });
     await extractTarFile(localTempPath, extractedDir);
 
-    const repoRoot = await findSingleTopLevelFolder(extractedDir);
-    const blueprintDir = path.join(repoRoot, blueprintFolderName);
+    const extractedBlueprintFolder = path.join(extractedDir, BLUEPRINT_FOLDER_NAME);
 
-    const s = await stat(blueprintDir).catch(() => null);
+    const s = await stat(extractedBlueprintFolder).catch(() => null);
     if (!s || !s.isDirectory()) {
-      throw new Error(
-        `Expected folder "${blueprintFolderName}/" at repo root (${repoReference.owner}/${repoReference.repo}${repoReference.ref ? `@${repoReference.ref}` : ""}).`,
-      );
+      throw new Error(`Expected folder "${BLUEPRINT_FOLDER_NAME}/" at repo root (${repoReference.owner}/${repoReference.repo}${repoReference.ref ? `@${repoReference.ref}` : ""}).`);
     }
 
-    await copyBlueprintContentsToCwd(blueprintDir, cwd);
+    await copyBlueprintContentsToCwd(extractedBlueprintFolder, cwd);
   } finally {
     await rm(tmpRoot, { recursive: true, force: true });
   }
@@ -64,42 +61,8 @@ const extractTarFile = async (tarGzPath: string, destDir: string) => {
   });
 };
 
-const findSingleTopLevelFolder = async (dir: string): Promise<string> => {
-  const entries = await readdir(dir, { withFileTypes: true });
-  const dirs = entries.filter((e) => e.isDirectory());
-  if (dirs.length !== 1) {
-    const names = entries.map((e) => e.name).join(", ");
-    throw new Error(`Unexpected tarball structure in ${dir}. Entries: ${names}`);
-  }
-  return path.join(dir, dirs[0]!.name);
-};
-
 const copyBlueprintContentsToCwd = async (blueprintDir: string, cwd: string) => {
-  const walk = async (current: string) => {
-    const entries = await readdir(current, { withFileTypes: true });
-    for (const entry of entries) {
-      const abs = path.join(current, entry.name);
-      const relFromBlueprint = path.relative(blueprintDir, abs);
-      if (!relFromBlueprint || relFromBlueprint.startsWith("..") || path.isAbsolute(relFromBlueprint)) {
-        throw new Error(`Refusing to copy outside blueprint folder: ${abs}`);
-      }
-      const dest = path.join(cwd, relFromBlueprint);
-
-      if (entry.isDirectory()) {
-        await mkdir(dest, { recursive: true });
-        await walk(abs);
-        continue;
-      }
-
-      if (entry.isFile()) {
-        await mkdir(path.dirname(dest), { recursive: true });
-        await copyFile(abs, dest);
-        continue;
-      }
-
-      // Ignore symlinks and other special files for safety/portability.
-    }
-  };
-
-  await walk(blueprintDir);
+  for (const name of await readdir(blueprintDir)) {
+    await cp(path.join(blueprintDir, name), path.join(cwd, name), { recursive: true, force: true });
+  }
 };

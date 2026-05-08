@@ -1,4 +1,6 @@
 import path from "path";
+import os from "node:os";
+import { mkdirSync } from "node:fs";
 import type { BlueprintSource } from "./models/BlueprintSource";
 import { existsSync, statSync } from "fs";
 
@@ -57,4 +59,21 @@ export const parseSupportedSource = (raw: string): BlueprintSource | null => {
   if (GITHUB_OWNER_REPO.test(s)) return { type: "github", source: s };
 
   return null;
+};
+
+export const getUserDataPath = (appName: string): string => {
+  const home = os.homedir();
+  const platform = process.platform;
+
+  if (platform === "darwin") {
+    return path.join(home, "Library", "Application Support", appName);
+  }
+
+  if (platform === "win32") {
+    const appData = process.env.APPDATA || path.join(home, "AppData", "Roaming");
+    return path.join(appData, appName);
+  }
+
+  const xdgDataHome = process.env.XDG_DATA_HOME || path.join(home, ".local", "share");
+  return path.join(xdgDataHome, appName);
 };
