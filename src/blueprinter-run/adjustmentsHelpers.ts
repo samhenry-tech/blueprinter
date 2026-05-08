@@ -1,8 +1,8 @@
 import { escapeRegExp } from "../regexHelpers";
 
-const getLowercase = (v: string) => v.toLowerCase();
+const getLowercase = (v: string) => normalizeString(v).toLowerCase();
 
-const getUppercase = (v: string) => v.toUpperCase();
+const getUppercase = (v: string) => normalizeString(v).toUpperCase();
 
 const getSentenceCase = (v: string) => {
   const sentence = splitIntoWords(v).join(" ").toLowerCase();
@@ -13,12 +13,13 @@ const getSentenceCase = (v: string) => {
 const getTitleCase = (v: string) => {
   return splitIntoWords(v).map(capitalize).join(" ");
 };
+
 const getPascalCase = (v: string) => {
-  return splitIntoWords(v).map(capitalize).join("");
+  return splitIntoWords(normalizeString(v)).map(capitalize).join("");
 };
 
 const getCamelCase = (v: string) => {
-  const [firstWord, ...remainingWords] = splitIntoWords(v);
+  const [firstWord, ...remainingWords] = splitIntoWords(normalizeString(v));
 
   return [
     firstWord?.toLowerCase() ?? "",
@@ -38,6 +39,8 @@ const capitalize = (value: string): string => {
 
   return lowerCaseValue.charAt(0).toUpperCase() + lowerCaseValue.slice(1);
 };
+
+const normalizeString = (v: string) => v.replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
 /**
  * Adjustments are functions that take a string and return a string.
